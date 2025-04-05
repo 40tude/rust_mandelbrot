@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "type": "cppvsdbg",
+            "request": "launch",
+            "name": "run mandel",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceFolder}\\target\\debug\\mandel.exe",
+            "environment": [
+                {
+                    "name": "RUST_BACKTRACE",
+                    "value": "short"
+                },
+                {
+                    "name": "RUSTC_TOOLCHAIN",
+                    "value": "C:\\Users\\phili\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc"
+                }
+            ],
+            "args": [],
+            "sourceFileMap": {},
+            "osx": {
+                "MIMode": "lldb"
+            }
+        }
+    ]
+}
