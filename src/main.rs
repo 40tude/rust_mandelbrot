@@ -17,7 +17,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::time::Instant;
 
-// std::thread is replaced by crossbeam::thread BUT I want to make sure were crossbeam::thread are used in the code
+// std::thread is replaced by crossbeam::thread BUT I want to make sure where crossbeam::thread is used in the code
 // use std::thread;
 // use crossbeam::thread; // => uncomment crossbeam = "0.8.4" in cargo.toml
 
