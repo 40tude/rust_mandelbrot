@@ -1,9 +1,10 @@
 // main_10
 // the code has been refactored
-// the image is now pre-allocated and the processing is done in place
 // the processing is done by one function render_zone() (code factorization)
 // render_zone() is called in both single-threaded and multithreaded portion of the code
-// this requires crossbeam::thread
+// the image is pre-allocated and the processing is done in place
+// no need to join the stripes at the end of the multitrheaded version
+// this require to use scope. I don't "use crossbeam::thread;" but call "crossbeam::thread::scope" instead
 
 // TODO : issues with scaling
 // TODO : add a zoom and be able to move the centre of the view_rectangle in complex space
