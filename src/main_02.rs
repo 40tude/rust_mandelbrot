@@ -24,6 +24,7 @@ fn main() {
 
 // ----------------------------------------------------------------------------
 fn build_mandelbrot(from: &Complex<f64>, to: &Complex<f64>, width: u32, height: u32) -> Vec<u8> {
+    // let mut image: Vec<u8> = Vec::with_capacity((width * height) as usize);
     let mut image: Vec<u8> = Vec::with_capacity((width * height * 3) as usize); // 3 bytes per pixel (RGB)
     dbg!(image.len(), image.capacity());
 

@@ -25,7 +25,7 @@ fn main() {
 
     let mut image = vec![0u8; (width * height * 3) as usize].into_boxed_slice();
     let start = Instant::now();
-    render_stripe(&from, &to, width, height, &mut image);
+    render_zone(&from, &to, width, height, &mut image);
     let duration = start.elapsed();
     println!("Single-threaded : {} ms.", duration.as_millis());
     save_image("./assets/image_rgb_11.png", &image, width, height).expect("Failed to save image");
@@ -40,14 +40,79 @@ fn main() {
 }
 
 // ----------------------------------------------------------------------------
-// target is supposed to be allocated and filled
-fn render_stripe(
+// Arc lets us share immutable data between threads, but for mutable data (such as the image to be modified), we need to associate it with a Mutex or RwLock.
+// We use Arc<Mutex<&mut [u8]>> to share the buffer between threads.
+// Each thread will work on a stripe of the image.
+// It's not ultra-performant, as the Mutex is global, but it's a good pedagogical test.
+// The buffer is locked for the duration of the stripes processed in each thread.
+// TO KEEP IN MIND : Arc is cloned, but not the entire buffer. The buffer is shared in memory, not duplicated.
+fn mt_build_mandelbrot(
     from: &Complex<f64>,
     to: &Complex<f64>,
     width: u32,
     height: u32,
-    target: &mut [u8],
-) {
+    image: Box<[u8]>,
+) -> Box<[u8]> {
+    let nthreads = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1) as u32;
+    println!("# of threads    : {nthreads}");
+
+    let rows_per_thread = height / nthreads;
+    let buffer = Arc::new(Mutex::new(image));
+
+    let mut handles = vec![];
+
+    for i in 0..nthreads {
+        let y_start = i * rows_per_thread;
+        let y_end = if i == nthreads - 1 {
+            height
+        } else {
+            (i + 1) * rows_per_thread
+        };
+
+        let buffer_clone = Arc::clone(&buffer);
+        let from = *from;
+        let to = *to;
+
+        let handle = thread::spawn(move || {
+            let mut guard = buffer_clone.lock().unwrap();
+            let slice = &mut guard[..];
+            let size = to - from;
+
+            for y in y_start..y_end {
+                for x in 0..width {
+                    let c = from
+                        + Complex::new(
+                            x as f64 * size.re / width as f64,
+                            y as f64 * size.im / height as f64,
+                        );
+                    let (r, g, b) = mandelbrot_color(&c);
+                    let idx = (y * width + x) as usize * 3;
+                    slice[idx] = r;
+                    slice[idx + 1] = g;
+                    slice[idx + 2] = b;
+                }
+            }
+        });
+
+        handles.push(handle);
+    }
+
+    for h in handles {
+        h.join().unwrap();
+    }
+
+    // Return the content of Arc<Mutex<Box<[u8]>>>
+    Arc::try_unwrap(buffer)
+        .expect("Multiple references exist, cannot unwrap Arc")
+        .into_inner()
+        .expect("Mutex poisoned")
+}
+
+// ----------------------------------------------------------------------------
+// target is supposed to be allocated and filled
+fn render_zone(from: &Complex<f64>, to: &Complex<f64>, width: u32, height: u32, target: &mut [u8]) {
     let size = to - from;
     for y in 0..height {
         for x in 0..width {
@@ -109,75 +174,4 @@ fn save_image(
 
     let mut writer = encoder.write_header().unwrap();
     writer.write_image_data(data)
-}
-
-// ----------------------------------------------------------------------------
-// Arc lets us share immutable data between threads, but for mutable data (such as the image to be modified), we need to associate it with a Mutex or RwLock.
-// We use Arc<Mutex<&mut [u8]>> to share the buffer between threads.
-// Each thread will work on a stripe of the image.
-// It's not ultra-performant, as the Mutex is global, but it's a good pedagogical test.
-// The buffer is locked for the duration of the stripes processed in each thread.
-// TO KEEP IN MIND : Arc is cloned, but not the entire buffer. The buffer is shared in memory, not duplicated.
-fn mt_build_mandelbrot(
-    from: &Complex<f64>,
-    to: &Complex<f64>,
-    width: u32,
-    height: u32,
-    image: Box<[u8]>,
-) -> Box<[u8]> {
-    let nthreads = std::thread::available_parallelism()
-        .map(|n| n.get())
-        .unwrap_or(1) as u32;
-    println!("# of threads    : {nthreads}");
-
-    let rows_per_thread = height / nthreads;
-    let buffer = Arc::new(Mutex::new(image));
-
-    let mut handles = vec![];
-
-    for i in 0..nthreads {
-        let y_start = i * rows_per_thread;
-        let y_end = if i == nthreads - 1 {
-            height
-        } else {
-            (i + 1) * rows_per_thread
-        };
-
-        let buffer = Arc::clone(&buffer);
-        let from = *from;
-        let to = *to;
-
-        let handle = thread::spawn(move || {
-            let mut guard = buffer.lock().unwrap();
-            let slice = &mut guard[..];
-            let size = to - from;
-
-            for y in y_start..y_end {
-                for x in 0..width {
-                    let c = from
-                        + Complex::new(
-                            x as f64 * size.re / width as f64,
-                            y as f64 * size.im / height as f64,
-                        );
-                    let (r, g, b) = mandelbrot_color(&c);
-                    let idx = (y * width + x) as usize * 3;
-                    slice[idx] = r;
-                    slice[idx + 1] = g;
-                    slice[idx + 2] = b;
-                }
-            }
-        });
-
-        handles.push(handle);
-    }
-
-    for h in handles {
-        h.join().unwrap();
-    }
-
-    // Return the content of Arc<Mutex<Box<[u8]>>>
-    Arc::try_unwrap(buffer)
-        .expect("Multiple references exist, cannot unwrap Arc")
-        .into_inner()
-        .expect("Mutex poisoned")
 }

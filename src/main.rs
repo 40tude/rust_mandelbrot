@@ -174,5 +174,6 @@ fn save_image(
     encoder.set_depth(png::BitDepth::Eight);
 
     let mut writer = encoder.write_header().unwrap();
+    // writer.write_image_data(data.as_slice())
     writer.write_image_data(data)
 }
