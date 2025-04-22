@@ -1,7 +1,8 @@
 ## About
-* start learning Rust in 2025
+* Read/translate this [**article on 40tude.fr**](https://www.40tude.fr/docs/06_programmation/rust/003_mandelbrot_multithread/mandelbrot_multithread.html) to get much more details
+* I start learning Rust in Q1 2025
 * some of my very first experiments
-* compare single-threaded vs multithreaded Mandelbrot set drawings
+* I compare single-threaded vs multithreaded Mandelbrot set drawings
     * png files are saved in ./assets
     * I take the time to get single-threaded version working as I want
     * main_07 is where I start to compare single-threaded vs multithreaded
